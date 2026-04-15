@@ -1,19 +1,26 @@
 <template>
   <div class="app">
     <header class="header">
-      <h1>🎵 Album Collection</h1>
-      <p>Discover amazing music albums</p>
+      <h1>🎵 {{ t('header.title') }}</h1>
+      <p>{{ t('header.subtitle') }}</p>
+      <div class="lang-selector">
+        <select v-model="locale" aria-label="Select language">
+          <option value="en">English</option>
+          <option value="fr">Français</option>
+          <option value="de">Deutsch</option>
+        </select>
+      </div>
     </header>
 
     <main class="main">
       <div v-if="loading" class="loading">
         <div class="spinner"></div>
-        <p>Loading albums...</p>
+        <p>{{ t('loading') }}</p>
       </div>
 
-      <div v-else-if="error" class="error">
-        <p>{{ error }}</p>
-        <button @click="fetchAlbums" class="retry-btn">Try Again</button>
+      <div v-else-if="hasError" class="error">
+        <p>{{ t('error.message') }}</p>
+        <button @click="fetchAlbums" class="retry-btn">{{ t('error.retry') }}</button>
       </div>
 
       <div v-else class="albums-grid">
@@ -29,23 +36,25 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 import AlbumCard from './components/AlbumCard.vue'
 import type { Album } from './types/album'
 
+const { t, locale } = useI18n()
+
 const albums = ref<Album[]>([])
 const loading = ref<boolean>(true)
-const error = ref<string | null>(null)
+const hasError = ref<boolean>(false)
 
-// Fetch albums from the API
 const fetchAlbums = async (): Promise<void> => {
   try {
     loading.value = true
-    error.value = null
+    hasError.value = false
     const response = await axios.get<Album[]>('/albums')
     albums.value = response.data
   } catch (err) {
-    error.value = 'Failed to load albums. Please make sure the API is running.'
+    hasError.value = true
     console.error('Error fetching albums:', err)
   } finally {
     loading.value = false
@@ -78,6 +87,38 @@ onMounted(() => {
 .header p {
   font-size: 1.2rem;
   opacity: 0.9;
+}
+
+.lang-selector {
+  margin-top: 1.25rem;
+}
+
+.lang-selector select {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  padding: 0.4rem 1rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='white' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.lang-selector select:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+  border-color: white;
+}
+
+.lang-selector select option {
+  background: #667eea;
+  color: white;
 }
 
 .main {
