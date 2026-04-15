@@ -1,0 +1,53 @@
+# GitHub Action workflow that runs on push to main branch
+
+# Docker build and push the album-api image to ACR
+name: Build and Push Docker Image
+on:
+  push:
+    branches: [ main ]
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Log in to Azure Container Registry
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
+    
+    - name: Build and push Docker image
+      run: |
+        docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/album-api:${{ github.sha }} ./albums-api
+        docker push ${{ secrets.ACR_LOGIN_SERVER }}/album-api:${{ github.sha }}
+            
+# tag the image with the GitHub run id and push to docker hub
+    - name: Build and push Docker image to Docker Hub
+      run: |
+        docker build -t yourdockerhubusername/album-api:${{ github.run_id }} ./albums-api
+        docker push yourdockerhubusername/album-api:${{ github.run_id }}
+
+# run tests on the album-api image
+    - name: Run tests on the album-api image
+      run: |
+        docker run --rm yourdockerhubusername/album-api:${{ github.run_id }} dotnet test /app/tests/AlbumApi.Tests/AlbumApi.Tests.csproj
+
+# deploy the album-api image to the dev AKS cluster
+    - name: Deploy to AKS
+      uses: azure/aks-set-context@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
+        resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
+    
+    - name: Update Kubernetes deployment
+      run: |
+        kubectl set image deployment/album-api-deployment album-api=${{ secrets.ACR_LOGIN_SERVER }}/album-api:${{ github.sha }} --record
+
+# find and replace the %%VERSION%% by the GitHub action run id in every appmanifest.yml file
+    - name: Update appmanifest.yml files
+      run: |
+        find . -name "appmanifest.yml" -exec sed -i 's/%%VERSION%%/${{ github.run_id }}/g' {} \;

@@ -129,3 +129,51 @@ output env array=[
   'Storage account name: ${storageAccount.name}'
   'Storage container name: ${blobContainer.name}'
 ]
+
+// Container Registry
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
+  name: registryName
+  location: location
+  sku: {
+    name: 'Basic'
+  }
+  properties: {
+    adminUserEnabled: true
+  }
+}
+
+// Azure OpenAI resource
+resource openAiService 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
+  name: 'openai-${uniqueSuffix}'
+  location: location
+  kind: 'OpenAI'
+  sku: {
+    name: 'S0'
+  }
+  properties: {
+    customSubDomainName: 'openai-${uniqueSuffix}'
+    networkAcls: {
+      defaultAction: 'Allow'
+    }
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+// OpenAI deployment for GPT-4
+resource gpt4Deployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = {
+  parent: openAiService
+  name: 'gpt-4'
+  properties: {
+    model: {
+      format: 'OpenAI'
+      name: 'gpt-4'
+      version: 'turbo-2024-04-09'
+    }
+    raiPolicyName: 'Microsoft.Default'
+  }
+  sku: {
+    name: 'Standard'
+    capacity: 10
+  }
+}
+

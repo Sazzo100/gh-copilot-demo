@@ -117,3 +117,102 @@ If you need to change these settings, you can modify:
 ### Alternative: GitHub Codespaces
 
 The easiest way is to open this solution in a GitHub Codespace, or run it locally in a devcontainer. The development environment will be automatically configured for you.
+
+## Deploy to Azure (Azure Container Apps)
+
+Use this flow to deploy both services (`albums-api` and `album-viewer`) to Azure.
+
+### Prerequisites
+
+- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)
+- Docker Desktop (running)
+- An Azure subscription with permission to create resources
+
+### 1) Sign in and set variables
+
+```powershell
+az login
+az account set --subscription "<your-subscription-id>"
+
+$RG="rg-copilot-demo"
+$LOC="uksouth"
+$ACR="acrcopilotdemo123"   # must be globally unique
+$ENV="cae-copilot-demo"
+$APIAPP="albums-api"
+$WEBAPP="album-viewer"
+$TAG="v1"
+```
+
+### 2) Create resource group and Azure Container Registry
+
+```powershell
+az group create --name $RG --location $LOC
+
+az acr create `
+  --resource-group $RG `
+  --name $ACR `
+  --sku Basic `
+  --admin-enabled true
+```
+
+### 3) Build and push container images
+
+```powershell
+az acr build --registry $ACR --image "$APIAPP:$TAG" .\albums-api
+az acr build --registry $ACR --image "$WEBAPP:$TAG" .\album-viewer
+```
+
+### 4) Create Container Apps environment
+
+```powershell
+az containerapp env create `
+  --name $ENV `
+  --resource-group $RG `
+  --location $LOC
+```
+
+### 5) Deploy API container app
+
+```powershell
+$ACR_SERVER=$(az acr show -n $ACR --query loginServer -o tsv)
+$ACR_USER=$(az acr credential show -n $ACR --query username -o tsv)
+$ACR_PASS=$(az acr credential show -n $ACR --query "passwords[0].value" -o tsv)
+
+az containerapp create `
+  --name $APIAPP `
+  --resource-group $RG `
+  --environment $ENV `
+  --image "$ACR_SERVER/$APIAPP:$TAG" `
+  --target-port 3000 `
+  --ingress external `
+  --registry-server $ACR_SERVER `
+  --registry-username $ACR_USER `
+  --registry-password $ACR_PASS
+```
+
+### 6) Deploy viewer container app
+
+```powershell
+az containerapp create `
+  --name $WEBAPP `
+  --resource-group $RG `
+  --environment $ENV `
+  --image "$ACR_SERVER/$WEBAPP:$TAG" `
+  --target-port 3001 `
+  --ingress external `
+  --registry-server $ACR_SERVER `
+  --registry-username $ACR_USER `
+  --registry-password $ACR_PASS
+```
+
+### 7) Get public URLs
+
+```powershell
+$API_URL=$(az containerapp show -n $APIAPP -g $RG --query properties.configuration.ingress.fqdn -o tsv)
+$WEB_URL=$(az containerapp show -n $WEBAPP -g $RG --query properties.configuration.ingress.fqdn -o tsv)
+
+"API: https://$API_URL"
+"Viewer: https://$WEB_URL"
+```
+
+> Note: If your viewer requires API URL at build-time (for example `VITE_ALBUM_API_HOST`), rebuild/redeploy the viewer image with that value set.

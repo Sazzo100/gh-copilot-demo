@@ -62,3 +62,68 @@ resource "null_resource" "docker_api-userprofile" {
     command = "az acr build --image devopsoh/api-userprofile:${local.apiuserprofile_base_image_tag} --registry ${azurerm_container_registry.container_registry.login_server} --build-arg build_version=${local.apiuserprofile_base_image_tag} --file ../../apis/userprofile/Dockerfile ../../apis/userprofile"
   }
 }
+
+# Container Registry
+resource "azurerm_container_registry" "container_registry" {
+  name                = "acr${random_string.resource_code.result}"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  sku                 = "Basic"
+  admin_enabled       = true
+
+  tags = {
+    environment = "dev"
+    project     = "albums"
+  }
+}
+
+# Azure OpenAI resource
+resource "azurerm_cognitive_account" "openai" {
+  name                = "openai-${random_string.resource_code.result}"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  kind                = "OpenAI"
+  sku_name            = "S0"
+
+  tags = {
+    environment = "dev"
+    project     = "albums"
+  }
+}
+
+resource "azurerm_cognitive_deployment" "gpt4" {
+  name                 = "gpt-4"
+  cognitive_account_id = azurerm_cognitive_account.openai.id
+
+  model {
+    format  = "OpenAI"
+    name    = "gpt-4"
+    version = "turbo-2024-04-09"
+  }
+
+  sku {
+    name     = "Standard"
+    capacity = 20
+  }
+
+  rai_policy_name = "Microsoft.Default"
+}
+
+# Output values
+output "container_registry_login_server" {
+  value = azurerm_container_registry.container_registry.login_server
+}
+
+output "container_registry_admin_username" {
+  value     = azurerm_container_registry.container_registry.admin_username
+  sensitive = true
+}
+
+output "openai_endpoint" {
+  value = azurerm_cognitive_account.openai.endpoint
+}
+
+output "openai_primary_key" {
+  value     = azurerm_cognitive_account.openai.primary_access_key
+  sensitive = true
+}
