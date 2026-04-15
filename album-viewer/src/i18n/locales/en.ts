@@ -11,5 +11,12 @@ export default {
     album: {
         addToCart: 'Add to Cart',
         preview: 'Preview',
+        inCart: 'In Cart',
+    },
+    cart: {
+        title: 'Your Cart',
+        empty: 'Your cart is empty',
+        remove: 'Remove',
+        total: 'Total',
     },
 }

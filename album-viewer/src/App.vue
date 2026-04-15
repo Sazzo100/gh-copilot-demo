@@ -3,14 +3,25 @@
     <header class="header">
       <h1>🎵 {{ t('header.title') }}</h1>
       <p>{{ t('header.subtitle') }}</p>
-      <div class="lang-selector">
-        <select v-model="locale" aria-label="Select language">
-          <option value="en">English</option>
-          <option value="fr">Français</option>
-          <option value="de">Deutsch</option>
-        </select>
+      <div class="header-controls">
+        <div class="lang-selector">
+          <select v-model="locale" aria-label="Select language">
+            <option value="en">English</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+          </select>
+        </div>
+        <button class="cart-btn" @click="cartOpen = true" :aria-label="t('cart.title')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+          </svg>
+          <span v-if="cartCount > 0" class="cart-badge">{{ cartCount }}</span>
+        </button>
       </div>
     </header>
+
+    <CartDrawer :is-open="cartOpen" @close="cartOpen = false" />
 
     <main class="main">
       <div v-if="loading" class="loading">
@@ -39,13 +50,17 @@ import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 import AlbumCard from './components/AlbumCard.vue'
+import CartDrawer from './components/CartDrawer.vue'
 import type { Album } from './types/album'
+import { useCart } from './composables/useCart'
 
 const { t, locale } = useI18n()
+const { cartCount } = useCart()
 
 const albums = ref<Album[]>([])
 const loading = ref<boolean>(true)
 const hasError = ref<boolean>(false)
+const cartOpen = ref<boolean>(false)
 
 const fetchAlbums = async (): Promise<void> => {
   try {
@@ -89,8 +104,16 @@ onMounted(() => {
   opacity: 0.9;
 }
 
-.lang-selector {
+.header-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
   margin-top: 1.25rem;
+}
+
+.lang-selector {
+  margin-top: 0;
 }
 
 .lang-selector select {
@@ -119,6 +142,44 @@ onMounted(() => {
 .lang-selector select option {
   background: #667eea;
   color: white;
+}
+
+.cart-btn {
+  position: relative;
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  color: white;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.cart-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: white;
+}
+
+.cart-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #e53e3e;
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 700;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
 }
 
 .main {
