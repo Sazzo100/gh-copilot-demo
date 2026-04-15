@@ -11,5 +11,12 @@ export default {
     album: {
         addToCart: 'Ajouter au panier',
         preview: 'Aperçu',
+        inCart: 'Dans le panier',
+    },
+    cart: {
+        title: 'Votre panier',
+        empty: 'Votre panier est vide',
+        remove: 'Supprimer',
+        total: 'Total',
     },
 }
