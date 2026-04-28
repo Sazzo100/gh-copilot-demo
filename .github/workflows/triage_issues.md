@@ -1,6 +1,6 @@
 ---
 on:
-  schedule: daily
+  #schedule: daily
 permissions:
   contents: read
   issues: read
